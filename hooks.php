@@ -3,126 +3,132 @@
  * FA_WarrantyManagement Module Hooks for FrontAccounting
  */
 
-$module_name = 'FA_WarrantyManagement';
-$module_version = '1.0.0';
-$module_description = 'Warranty Management - SKU definitions, liability, RMA, claims';
-$module_author = 'KSFII Development Team';
-$module_category = 'CRM';
+define('SS_WARRANTY', 142 << 8);
 
-function fa_wm_install(): bool
-{
-    global $db;
+class hooks_fa_warrantymanagement extends hooks {
+    var $module_name = 'fa_warrantymanagement';
 
-    @include_once __DIR__ . '/vendor-src/Ksfraser/Common/ComposerDependencyManager.php';
-    if (class_exists('Ksfraser\Common\ComposerDependencyManager')) {
-        $composerMgr = new \Ksfraser\Common\ComposerDependencyManager(__DIR__);
-        $composerMgr->ensureDependencies();
-        @include_once $composerMgr->getAutoloadPath();
+    function install_options($app) {
+        global $path_to_root;
+
+        switch($app->id) {
+            case 'CRM':
+                $app->add_lapp_function(0, _("Warranty Products"),
+                    $path_to_root."/modules/".$this->module_name."/products.php", 'SA_WARRANTYVIEW', MENU_ENTRY);
+                $app->add_lapp_function(1, _("Liabilities"),
+                    $path_to_root."/modules/".$this->module_name."/liability.php", 'SA_WARRANTYMANAGE', MENU_ENTRY);
+                $app->add_lapp_function(2, _("RMA"),
+                    $path_to_root."/modules/".$this->module_name."/rma.php", 'SA_WARRANTYMANAGE', MENU_ENTRY);
+                break;
+        }
     }
 
-    if (!fa_wm_create_tables()) return false;
-    if (!fa_wm_insert_initial_data()) return false;
-    return true;
-}
-
-function fa_wm_activate(): bool
-{
-    @include_once __DIR__ . '/vendor-src/Ksfraser/Common/ComposerDependencyManager.php';
-    if (class_exists('Ksfraser\Common\ComposerDependencyManager')) {
-        $composerMgr = new \Ksfraser\Common\ComposerDependencyManager(__DIR__);
-        $composerMgr->ensureDependencies();
-        @include_once $composerMgr->getAutoloadPath();
+    function install_access() {
+        $security_sections[SS_WARRANTY] = _("Warranty Management");
+        $security_areas['SA_WARRANTYVIEW'] = array(SS_WARRANTY | 1, _("View Warranty"));
+        $security_areas['SA_WARRANTYMANAGE'] = array(SS_WARRANTY | 2, _("Manage Warranty"));
+        return array($security_areas, $security_sections);
     }
 
-    add_hook('warranty_created', 'fa_wm_on_warranty_created');
-    add_hook('ticket_created', 'fa_wm_on_ticket_created');
-    return true;
-}
-
-function fa_wm_deactivate(): bool { return true; }
-function fa_wm_uninstall(): bool { return true; }
-
-function fa_wm_create_tables(): bool
-{
-    global $db;
-
-    $tables = [
-        "CREATE TABLE IF NOT EXISTS `" . TB_PREF . "fa_wm_products` (
-            `id` INT(11) NOT NULL AUTO_INCREMENT,
-            `sku_id` VARCHAR(30) NOT NULL,
-            `provider_type` VARCHAR(20) DEFAULT 'Manufacturer',
-            `provider_name` VARCHAR(100) DEFAULT NULL,
-            `term_type` VARCHAR(20) DEFAULT 'Fixed',
-            `term_months` INT(11) DEFAULT 12,
-            `coverage_details` TEXT,
-            `cost_to_provide` DECIMAL(15,2) DEFAULT 0,
-            `max_claims` INT(11) DEFAULT 1,
-            `max_value_per_claim` DECIMAL(15,2) DEFAULT 0,
-            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (`id`),
-            UNIQUE KEY `idx_sku_id` (`sku_id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
-
-        "CREATE TABLE IF NOT EXISTS `" . TB_PREF . "fa_wm_liability` (
-            `id` INT(11) NOT NULL AUTO_INCREMENT,
-            `sale_id` INT(11) DEFAULT NULL,
-            `sale_item_id` INT(11) DEFAULT NULL,
-            `product_serial` VARCHAR(50) DEFAULT NULL,
-            `warranty_product_id` INT(11) DEFAULT NULL,
-            `activation_date` DATE DEFAULT NULL,
-            `expiration_date` DATE DEFAULT NULL,
-            `liability_amount` DECIMAL(15,2) DEFAULT 0,
-            `current_value` DECIMAL(15,2) DEFAULT 0,
-            `status` VARCHAR(20) DEFAULT 'Active',
-            `account_id` VARCHAR(20) DEFAULT NULL,
-            `contact_id` INT(11) DEFAULT NULL,
-            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (`id`),
-            KEY `idx_sale_id` (`sale_id`),
-            KEY `idx_status` (`status`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
-
-        "CREATE TABLE IF NOT EXISTS `" . TB_PREF . "fa_wm_rma` (
-            `id` INT(11) NOT NULL AUTO_INCREMENT,
-            `rma_number` VARCHAR(30) NOT NULL,
-            `ticket_id` INT(11) DEFAULT NULL,
-            `warranty_liability_id` INT(11) DEFAULT NULL,
-            `return_type` VARCHAR(20) DEFAULT 'Repair',
-            `authorization_status` VARCHAR(20) DEFAULT 'Pending',
-            `authorization_date` DATETIME DEFAULT NULL,
-            `authorized_by` VARCHAR(100) DEFAULT NULL,
-            `resolution` TEXT,
-            `credit_note_id` INT(11) DEFAULT NULL,
-            `return_shipping_info` VARCHAR(255) DEFAULT NULL,
-            `debit_gl` VARCHAR(20) DEFAULT NULL,
-            `account_id` VARCHAR(20) DEFAULT NULL,
-            `contact_id` INT(11) DEFAULT NULL,
-            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (`id`),
-            UNIQUE KEY `idx_rma_number` (`rma_number`),
-            KEY `idx_ticket_id` (`ticket_id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
-    ];
-
-    foreach ($tables as $sql) {
-        if (!db_query($sql, "Could not create table")) return false;
+    function activate_extension($company, $check_only=true) {
+        $updates = array('sql/update.sql' => array($this->module_name));
+        $ok = $this->update_databases($company, $updates, $check_only);
+        if ($check_only || !$ok) {
+            return $ok;
+        }
+        $this->ensure_warranty_schema();
+        return $ok;
     }
-    return true;
-}
 
-function fa_wm_insert_initial_data(): bool
-{
-    $providers = ['Manufacturer', 'Wholesaler', 'Retailer'];
-    foreach ($providers as $provider) {
-        db_query("INSERT IGNORE INTO " . TB_PREF . "fa_wm_products 
-            (sku_id, provider_type, term_type, term_months) 
-            VALUES ('DEFAULT-" . strtolower($provider) . "', '" . $provider . "', 'Fixed', 12)");
+    private function table_exists($table) {
+        $sql = "SHOW TABLES LIKE " . db_escape($table);
+        $res = db_query($sql, 'Failed checking table existence');
+        return db_num_rows($res) > 0;
     }
-    return true;
-}
 
-function fa_wm_on_warranty_created($warrantyId) { error_log("Warranty created: $warrantyId"); }
-function fa_wm_on_ticket_created($ticketId) { error_log("Ticket created: $ticketId"); }
+    private function ensure_warranty_schema() {
+        $tables = array(
+            TB_PREF . "fa_wm_products" => "
+                CREATE TABLE IF NOT EXISTS `" . TB_PREF . "fa_wm_products` (
+                    `id` INT(11) NOT NULL AUTO_INCREMENT,
+                    `sku_id` VARCHAR(30) NOT NULL,
+                    `provider_type` VARCHAR(20) DEFAULT 'Manufacturer',
+                    `provider_name` VARCHAR(100) DEFAULT NULL,
+                    `term_type` VARCHAR(20) DEFAULT 'Fixed',
+                    `term_months` INT(11) DEFAULT 12,
+                    `coverage_details` TEXT,
+                    `cost_to_provide` DECIMAL(15,2) DEFAULT 0,
+                    `max_claims` INT(11) DEFAULT 1,
+                    `max_value_per_claim` DECIMAL(15,2) DEFAULT 0,
+                    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    PRIMARY KEY (`id`),
+                    UNIQUE KEY `idx_sku_id` (`sku_id`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+
+            TB_PREF . "fa_wm_liability" => "
+                CREATE TABLE IF NOT EXISTS `" . TB_PREF . "fa_wm_liability` (
+                    `id` INT(11) NOT NULL AUTO_INCREMENT,
+                    `sale_id` INT(11) DEFAULT NULL,
+                    `sale_item_id` INT(11) DEFAULT NULL,
+                    `product_serial` VARCHAR(50) DEFAULT NULL,
+                    `warranty_product_id` INT(11) DEFAULT NULL,
+                    `activation_date` DATE DEFAULT NULL,
+                    `expiration_date` DATE DEFAULT NULL,
+                    `liability_amount` DECIMAL(15,2) DEFAULT 0,
+                    `current_value` DECIMAL(15,2) DEFAULT 0,
+                    `status` VARCHAR(20) DEFAULT 'Active',
+                    `account_id` VARCHAR(20) DEFAULT NULL,
+                    `contact_id` INT(11) DEFAULT NULL,
+                    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    PRIMARY KEY (`id`),
+                    KEY `idx_sale_id` (`sale_id`),
+                    KEY `idx_status` (`status`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+
+            TB_PREF . "fa_wm_rma" => "
+                CREATE TABLE IF NOT EXISTS `" . TB_PREF . "fa_wm_rma` (
+                    `id` INT(11) NOT NULL AUTO_INCREMENT,
+                    `rma_number` VARCHAR(30) NOT NULL,
+                    `ticket_id` INT(11) DEFAULT NULL,
+                    `warranty_liability_id` INT(11) DEFAULT NULL,
+                    `return_type` VARCHAR(20) DEFAULT 'Repair',
+                    `authorization_status` VARCHAR(20) DEFAULT 'Pending',
+                    `authorization_date` DATETIME DEFAULT NULL,
+                    `authorized_by` VARCHAR(100) DEFAULT NULL,
+                    `resolution` TEXT,
+                    `credit_note_id` INT(11) DEFAULT NULL,
+                    `return_shipping_info` VARCHAR(255) DEFAULT NULL,
+                    `debit_gl` VARCHAR(20) DEFAULT NULL,
+                    `account_id` VARCHAR(20) DEFAULT NULL,
+                    `contact_id` INT(11) DEFAULT NULL,
+                    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    PRIMARY KEY (`id`),
+                    UNIQUE KEY `idx_rma_number` (`rma_number`),
+                    KEY `idx_ticket_id` (`ticket_id`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+
+        foreach ($tables as $table_name => $sql) {
+            db_query($sql, "Could not create Warranty Management table: $table_name");
+        }
+
+        $this->insert_initial_data();
+    }
+
+    private function insert_initial_data() {
+        $providers = array('Manufacturer', 'Wholesaler', 'Retailer');
+        foreach ($providers as $provider) {
+            db_query("INSERT IGNORE INTO " . TB_PREF . "fa_wm_products 
+                (sku_id, provider_type, term_type, term_months) 
+                VALUES ('DEFAULT-" . strtolower($provider) . "', '$provider', 'Fixed', 12)");
+        }
+    }
+
+    function db_prevoid($trans_type, $trans_no) {
+        // Handle voiding if needed
+    }
+}
+?>

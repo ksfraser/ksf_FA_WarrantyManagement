@@ -8,7 +8,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Ksfraser\\Common\\": "vendor-src/Ksfraser/Common/"
+            "Ksfraser\\": "src/Ksfraser/"
         }
     },
     "minimum-stability": "stable"

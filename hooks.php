@@ -5,9 +5,9 @@
 
 define('SS_WARRANTY', 142 << 8);
 
-class hooks_fa_warrantymanagement extends hooks {
-    var $module_name = 'fa_warrantymanagement';
-    var $version = '1.0.0';
+class hooks_ksf_FA_WarrantyManagement extends hooks {
+    var $module_name = 'ksf_FA_WarrantyManagement';
+    var $version = '2.4.0';
 
     function install_options($app) {
         global $path_to_root;
@@ -29,6 +29,13 @@ class hooks_fa_warrantymanagement extends hooks {
         $security_areas['SA_WARRANTYVIEW'] = array(SS_WARRANTY | 1, _("View Warranty"));
         $security_areas['SA_WARRANTYMANAGE'] = array(SS_WARRANTY | 2, _("Manage Warranty"));
         return array($security_areas, $security_sections);
+    }
+
+    function install_extension($check_only=true) {
+        return true;
+    }
+
+    function install_tabs($app) {
     }
 
     function activate_extension($company, $check_only=true) {

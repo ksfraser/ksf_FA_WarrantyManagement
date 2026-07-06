@@ -26,7 +26,7 @@
  * @version 2.4.3
  */
 
-define('SS_ksf_FA_WarrantyManagement', 144 << 8);
+define('SS_ksf_FA_WarrantyManagement', 146 << 8);
 
 class hooks_ksf_FA_WarrantyManagement extends hooks {
     var $module_name = 'ksf_FA_WarrantyManagement';

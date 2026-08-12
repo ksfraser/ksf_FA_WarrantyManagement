@@ -61,7 +61,7 @@ class hooks_ksf_FA_WarrantyManagement extends hooks {
      * @return array [0] => $security_areas, [1] => $security_sections
      */
     function install_access() {
-        $security_sections[SS_ksf_FA_WarrantyManagement] = _("");
+        $security_sections[SS_ksf_FA_WarrantyManagement] = _("Warranty Management");
         $security_areas['SA_ksf_FA_WarrantyManagementVIEW'] = array(
             SS_ksf_FA_WarrantyManagement | 1, 
             _("View ")

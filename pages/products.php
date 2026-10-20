@@ -73,7 +73,7 @@ amount_row(_("Max Value Per Claim:"), 'max_value_per_claim');
 end_table();
 submit_center($Mode == 'EDIT_ITEM' ? _("Update") : _("Add Product"), true, '', true);
 
-$sql = "SELECT * FROM " . TB_PREF . "fa_wm_products ORDER BY sku_id";
+$sql = "SELECT * FROM " . TB_PREF . "ksf_warrantymanagement_products ORDER BY sku_id";
 $result = db_query($sql, "Could not get products");
 
 start_table(TABLESTYLE, "width=60%");

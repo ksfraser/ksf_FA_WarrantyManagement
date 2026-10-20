@@ -24,8 +24,8 @@ function warranty_liability_list()
         l.account_id,
         w.sku_id,
         w.provider_name
-    FROM " . TB_PREF . "fa_wm_liability l
-    LEFT JOIN " . TB_PREF . "fa_wm_products w ON l.warranty_product_id = w.id";
+    FROM " . TB_PREF . "ksf_warrantymanagement_liability l
+    LEFT JOIN " . TB_PREF . "ksf_warrantymanagement_products w ON l.warranty_product_id = w.id";
 
     if ($filter !== 'All') {
         $sql .= " WHERE l.status = " . db_escape($filter);

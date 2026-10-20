@@ -33,7 +33,7 @@ EventManager::listen('warranty.expiration_check', function($event) {
         $warrantyId = $data['warranty_id'];
         
         global $db;
-        $sql = "SELECT * FROM " . TB_PREF . "fa_wm_liability WHERE id = " . db_escape($warrantyId);
+        $sql = "SELECT * FROM " . TB_PREF . "ksf_warrantymanagement_liability WHERE id = " . db_escape($warrantyId);
         $result = db_query($sql, "Could not get warranty");
         $liability = db_fetch_assoc($result);
         
@@ -55,7 +55,7 @@ EventManager::listen('rma.approved', function($event) {
         $rmaId = $data['rma_id'];
         
         global $db;
-        $sql = "SELECT ticket_id FROM " . TB_PREF . "fa_wm_rma WHERE id = " . db_escape($rmaId);
+        $sql = "SELECT ticket_id FROM " . TB_PREF . "ksf_warrantymanagement_rma WHERE id = " . db_escape($rmaId);
         $result = db_query($sql, "Could not get RMA");
         $rma = db_fetch_assoc($result);
         
@@ -78,7 +78,7 @@ EventManager::listen('rma.completed', function($event) {
         $rmaId = $data['rma_id'];
         
         global $db;
-        $sql = "SELECT ticket_id, warranty_liability_id FROM " . TB_PREF . "fa_wm_rma WHERE id = " . db_escape($rmaId);
+        $sql = "SELECT ticket_id, warranty_liability_id FROM " . TB_PREF . "ksf_warrantymanagement_rma WHERE id = " . db_escape($rmaId);
         $result = db_query($sql, "Could not get RMA");
         $rma = db_fetch_assoc($result);
         
@@ -90,7 +90,7 @@ EventManager::listen('rma.completed', function($event) {
         }
         
         if ($rma && !empty($rma['warranty_liability_id'])) {
-            $sql = "UPDATE " . TB_PREF . "fa_wm_liability SET 
+            $sql = "UPDATE " . TB_PREF . "ksf_warrantymanagement_liability SET 
                 status = 'Claimed',
                 current_value = 0
                 WHERE id = " . db_escape($rma['warranty_liability_id']);

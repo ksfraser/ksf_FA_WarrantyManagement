@@ -24,9 +24,9 @@ function warranty_rma_list()
         r.created_at,
         l.product_serial,
         w.sku_id
-    FROM " . TB_PREF . "fa_wm_rma r
-    LEFT JOIN " . TB_PREF . "fa_wm_liability l ON r.warranty_liability_id = l.id
-    LEFT JOIN " . TB_PREF . "fa_wm_products w ON l.warranty_product_id = w.id";
+    FROM " . TB_PREF . "ksf_warrantymanagement_rma r
+    LEFT JOIN " . TB_PREF . "ksf_warrantymanagement_liability l ON r.warranty_liability_id = l.id
+    LEFT JOIN " . TB_PREF . "ksf_warrantymanagement_products w ON l.warranty_product_id = w.id";
 
     if ($filter !== 'All') {
         if ($filter === 'Pending') {
@@ -120,7 +120,7 @@ function warranty_rma_edit($rma_id = 0)
     include_once $path_to_root . "/includes/ui/ui_view.inc";
 
     if ($rma_id > 0) {
-        $sql = "SELECT * FROM " . TB_PREF . "fa_wm_rma WHERE id = " . db_escape($rma_id);
+        $sql = "SELECT * FROM " . TB_PREF . "ksf_warrantymanagement_rma WHERE id = " . db_escape($rma_id);
         $result = db_query($sql, "Could not get RMA");
         $rma = db_fetch($result);
     } else {
